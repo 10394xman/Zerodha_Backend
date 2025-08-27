@@ -5,6 +5,9 @@ const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 
+const cookieParser = require("cookie-parser");
+const authRoute = require("./Routes/AuthRoute");
+
 const { HoldingsModel } = require("./model/HoldingsModel");
 const { PositionsModel } = require("./model/PositionsModel");
 const { OrdersModel } = require("./model/OrdersModel");
@@ -14,8 +17,30 @@ const URL = process.env.MONGO_URL;
 
 const app = express();
 
-app.use(cors());
-app.use(bodyParser.json());
+const allowedOrigins = [ 'http://localhost:5174', 'http://localhost:5173'];
+
+app.use(cors({
+  origin: function(origin, callback) {
+    // allow requests with no origin (e.g., curl, Postman)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true,
+}));
+
+app.use(cookieParser());
+
+//the JSON and URL-encoded parsing functionalities of body-parser are built directly
+//  into Express as express.json() and express.urlencoded() middleware
+
+app.use(express.json());
+//extended: true allows parsing nested objects and arrays in the form data
+app.use(express.urlencoded({ extended: true }));
 
 mongoose
   .connect(URL)
@@ -73,6 +98,8 @@ mongoose
 //       });
 //   });
 // });
+
+app.use("/api", authRoute);
 
 app.get("/allHoldings", async (req, res) => {
   try {
